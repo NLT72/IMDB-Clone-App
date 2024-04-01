@@ -1,52 +1,82 @@
-// Fetch data from the OMDB API
-const API_KEY = 'http://www.omdbapi.com/?i=tt3896198&apikey=46348d8b';
-const searchInput = document.getElementById('searchInput');
-const searchResults = document.getElementById('searchResults');
-
-searchInput.addEventListener('input', () => {
-    const searchTerm = searchInput.value.trim();
-    if (searchTerm) {
-        fetch(`https://www.omdbapi.com/?apikey=${API_KEY}&s=${searchTerm}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.Search) {
-                    const movies = data.Search;
-                    renderSearchResults(movies);
-                } else {
-                    searchResults.innerHTML = '<p>No results found</p>';
-                }
-            })
-            .catch(error => console.error('Error fetching data:', error));
-    } else {
-        searchResults.innerHTML = '';
-    }
-});
-
-function renderSearchResults(movies) {
-    searchResults.innerHTML = '';
-    movies.forEach(movie => {
-        const movieCard = document.createElement('div');
-        movieCard.classList.add('movie-card');
-        movieCard.innerHTML = `
-            <img src="${movie.Poster}" alt="${movie.Title}">
-            <h3>${movie.Title}</h3>
-            <button class="add-favorite" data-imdbid="${movie.imdbID}">Add to Favorites</button>
+// Function to fetch data from the OMDB API
+async function searchMovies(query) {
+    const response = await fetch(`http://www.omdbapi.com/?i=tt3896198&apikey=46348d8b`);
+    const data = await response.json();
+    return data.Search;
+  }
+  
+  // Function to display search results
+  document.getElementById('searchInput').addEventListener('input', async function() {
+    const query = this.value;
+    const results = await searchMovies(query);
+    const searchResults = document.getElementById('searchResults');
+    searchResults.innerHTML = ''; // Clear previous results
+    if (results) {
+      results.forEach(movie => {
+        const movieItem = document.createElement('div');
+        movieItem.classList.add('movie-item');
+        movieItem.innerHTML = `
+          <h3>${movie.Title}</h3>
+          <img src="${movie.Poster}" alt="${movie.Title}">
+          <button onclick="addToFavorites('${movie.imdbID}')">Add to Favorites</button>
+          <button onclick="showMovieDetails('${movie.imdbID}')">View Details</button>
         `;
-        searchResults.appendChild(movieCard);
-    });
-}
-
-// Add to favorites
-searchResults.addEventListener('click', event => {
-    if (event.target.classList.contains('add-favorite')) {
-        const imdbID = event.target.dataset.imdbid;
-        const movieCard = event.target.closest('.movie-card');
-        const movieTitle = movieCard.querySelector('h3').innerText;
-        // Add to favorites logic
-        // You can use local storage to store favorites
-        // Handle UI changes
+        searchResults.appendChild(movieItem);
+      });
     }
-});
-
-// Display movie details page
-// Similar to fetching search results and rendering movie details
+  });
+  
+  // Function to add a movie to favorites
+  function addToFavorites(movieId) {
+    let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+    if (!favorites.includes(movieId)) {
+      favorites.push(movieId);
+      localStorage.setItem('favorites', JSON.stringify(favorites));
+    }
+  }
+  
+  // Function to remove a movie from favorites
+  function removeFromFavorites(movieId) {
+    let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+    if (favorites.includes(movieId)) {
+      favorites = favorites.filter(id => id !== movieId);
+      localStorage.setItem('favorites', JSON.stringify(favorites));
+      updateFavoritesList();
+    }
+  }
+  
+  // Function to display detailed movie information on the movie page
+  async function showMovieDetails(movieId) {
+    const response = await fetch(`http://www.omdbapi.com/?i=tt3896198&apikey=46348d8b`);
+    const movie = await response.json();
+    const movieDetails = document.getElementById('movieDetails');
+    movieDetails.innerHTML = `
+      <h2>${movie.Title}</h2>
+      <img src="${movie.Poster}" alt="${movie.Title}">
+      <p>${movie.Plot}</p>
+      <button onclick="addToFavorites('${movie.imdbID}')">Add to Favorites</button>
+      <button onclick="removeFromFavorites('${movie.imdbID}')">Remove from Favorites</button>
+    `;
+  }
+  
+  // Function to update the favorites list
+  function updateFavoritesList() {
+    const favoriteList = document.getElementById('favoriteList');
+    favoriteList.innerHTML = '';
+    let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+    favorites.forEach(async movieId => {
+      const response = await fetch(`http://www.omdbapi.com/?i=tt3896198&apikey=46348d8b`);
+      const movie = await response.json();
+      const listItem = document.createElement('li');
+      listItem.innerHTML = `
+        <h3>${movie.Title}</h3>
+        <img src="${movie.Poster}" alt="${movie.Title}">
+        <button onclick="showMovieDetails('${movie.imdbID}')">View Details</button>
+        <button onclick="removeFromFavorites('${movie.imdbID}')">Remove from Favorites</button>
+      `;
+      favoriteList.appendChild(listItem);
+    });
+  }
+  
+  // Call the updateFavoritesList function to display the favorites on the favorites page
+  updateFavoritesList();
